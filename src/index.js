@@ -2,6 +2,7 @@ import {h, render} from 'preact'
 import styled from 'preact-emotion'
 import createState from 'flipstate/preact'
 import R from 'ramda'
+import {Router as UnstyledRouter, navigate} from '@reach/router'
 
 const {StateProvider, addState} = createState()
 const Main = styled('div')`
@@ -20,15 +21,15 @@ const AddressBarInput = styled('input')`
   margin-right: 8px;
 `
 
-const Checkbox = styled('input')`
-`
-
-const LabelText = styled('span')`
-  color: ${({disabled}) => disabled ? '#9b9b9b' : 'inherit'}
-`
 const Button = styled('button')`
   margin-bottom: 8px;
   margin-right: 8px;
+`
+
+const Router = styled(UnstyledRouter, {
+  shouldForwardProp: (key) => key !== 'ref'
+})`
+  height: 100%
 `
 
 const StateContainer = styled('div')`
@@ -39,11 +40,14 @@ const StateContainer = styled('div')`
 `
 
 function renderStateEditor (editingState, state, updateApplicationStateEditorState, path = [], level = 0) {
-  if (typeof state === 'string') {
-    return <span><input type="text" value={state} disabled={!editingState} onChange={(event) => updateApplicationStateEditorState(path, event)}/>{'\n'}</span>
-  }
   if (typeof state === 'boolean') {
     return <span><input type="checkbox" checked={state} disabled={!editingState} onChange={(event) => updateApplicationStateEditorState(path, event)}/>{'\n'}</span>
+  }
+  if (typeof state === 'number') {
+    return <span><input type="number" value={state} disabled={!editingState} onChange={(event) => updateApplicationStateEditorState(path, event)}/>{'\n'}</span>
+  }
+  if (typeof state === 'string') {
+    return <span><input type="text" value={state} disabled={!editingState} onChange={(event) => updateApplicationStateEditorState(path, event)}/>{'\n'}</span>
   }
   if (state instanceof Array) {
     const result = [`[\n`]
@@ -102,48 +106,78 @@ function setState (state) {
     state: JSON.stringify(state)
   }, '*')
 }
+function backAddress () {
+  if (!application) {
+    return
+  }
+  application().postMessage({
+    type: 'move history backwards'
+  }, '*')
+}
+function forwardAddress () {
+  if (!application) {
+    return
+  }
+  application().postMessage({
+    type: 'move history forwards',
+  }, '*')
+}
 
 const DevToolState = addState('DevTool', {
-  addressBarUrl: 'http://localhost:8080/',
-  udpateAddressBarUrl (state, {target: {value: addressBarUrl}}) {
+  addressBarUrl: '',
+  updateAddressBarUrl (state, {target: {value: addressBarUrl}}) {
     return {
       addressBarUrl
     }
   },
+  sync: false,
+  syncState ({sync, syncState}) {
+    if (!sync) {
+      setTimeout(() => {
+        getState()
+        syncState()
+      }, 200)
+    }
+  },
   connected: false,
   iframeUrl: '',
-  openAsIframe ({connected, addressBarUrl}) {
+  async openAs ({updateAddressBarUrl, openAsIframe, openAsWindow}, mode, url) {
+    await updateAddressBarUrl({target: {value: url}})
+    mode === 'iframe' && openAsIframe()
+    // can't auto open as window due to popup blockers
+  },
+  openAsIframe ({syncState, connected, addressBarUrl}) {
     if (connected === 'window') {
       application().close()
     }
     application = () => document.getElementById('application').contentWindow
+    navigate(`/iframe/${encodeURIComponent(addressBarUrl)}`, {
+      replace: true
+    })
+    syncState()
     return {
+      sync: false,
       connected: 'iframe',
       iframeUrl: addressBarUrl,
       applicationState: undefined
     }
   },
-  openAsWindow ({connected, addressBarUrl}) {
+  openAsWindow ({syncState, connected, addressBarUrl}) {
     const windowRef = window.open(addressBarUrl, 'flipstate-application')
     application = () => windowRef
+    navigate(`/window/${encodeURIComponent(addressBarUrl)}`, {
+      replace: true
+    })
+    syncState()
     return {
+      sync: false,
       connected: 'window',
       iframeUrl: '',
       applicationState: undefined
     }
   },
   applicationState: undefined,
-  autoRefresh: false,
-  updateAutoRefresh (state, {target: {checked: autoRefresh}}) {
-    if (autoRefresh) {
-      getState()
-      subscribeState()
-    }
-    return {
-      autoRefresh
-    }
-  },
-  applicationMessage ({addressBarUrl, autoRefresh, editingState}, event) {
+  applicationMessage ({addressBarUrl, editingState}, event) {
     const {origin, data = {}} = event
     if (origin !== getOrigin(addressBarUrl)) {
       return
@@ -156,10 +190,9 @@ const DevToolState = addState('DevTool', {
     }
     switch (data.type) {
       case 'application state':
-        if (autoRefresh) {
-          subscribeState()
-        }
+        subscribeState()
         return {
+          sync: true,
           addressBarUrl: data.location,
           applicationState: JSON.parse(data.state)
         }
@@ -179,9 +212,11 @@ const DevToolState = addState('DevTool', {
   },
   updateApplicationStateEditorState ({applicationState}, path, {target: {type, checked, value}}) {
     return {
-      applicationState: R.set(R.lensPath(path), type
+      applicationState: R.set(R.lensPath(path), type === 'boolean'
         ? checked
-        : value, applicationState)
+        : type === 'number'
+          ? Number.parseInt(value, 10)
+          : value, applicationState)
     }
   },
   saveEditState ({applicationState}) {
@@ -193,37 +228,37 @@ const DevToolState = addState('DevTool', {
   }
 })
 
-const DevTool = () =>
-  <DevToolState>{({connected, iframeUrl, backAddress, forwardAddress, addressBarUrl, udpateAddressBarUrl, openAsWindow, openAsIframe, autoRefresh, updateAutoRefresh, applicationState, editingState, startEditState, saveEditState, cancelEditState}) =>
-    <Main>
+const DevTool = ({mode, url}) =>
+  <DevToolState>{({openAs, connected, iframeUrl, addressBarUrl, updateAddressBarUrl, openAsWindow, openAsIframe, applicationState, editingState, startEditState, saveEditState, cancelEditState}) => {
+    if (mode && url && addressBarUrl !== url && !connected) {
+      openAs(mode, url)
+      return <p>Loading...</p>
+    }
+    return <Main>
       <h1>flipstate dev tool</h1>
       <div>
         <Button onClick={backAddress} disabled={editingState}>⇦</Button>
         <Button onClick={forwardAddress} disabled={editingState}>⇨</Button>
-        <AddressBarInput type="text" value={addressBarUrl} onChange={udpateAddressBarUrl} disabled={editingState}/>
+        <AddressBarInput type="text" value={addressBarUrl} onChange={updateAddressBarUrl} disabled={editingState}/>
         <Button onClick={openAsIframe} disabled={editingState}>Open as iframe</Button>
         <Button onClick={openAsWindow} disabled={editingState}>Open as window</Button>
-        <span>If iframe doesn't work, try window mode as it avoids https restrictions</span>
-      </div>
-      <h2>State</h2>
-      <div>
-        <Button onClick={getState} disabled={!connected || autoRefresh || editingState}>{autoRefresh} {editingState}Refresh</Button>
-        <label>
-          <Checkbox type="checkbox" checked={autoRefresh} onChange={updateAutoRefresh} disabled={!connected || editingState}/> <LabelText disabled={!connected || editingState}>auto</LabelText>
-        </label>
+        <p>If iframe doesn't work, try window mode as it avoids https restrictions</p>
       </div>
       <div>
-        {!editingState && <Button onClick={startEditState} disabled={!connected || !applicationState}>Edit</Button>}
+        {!editingState && <Button onClick={startEditState} disabled={!connected || !applicationState}>Edit state</Button>}
         {editingState && <Button onClick={saveEditState}>Save</Button>}
         {editingState && <Button onClick={cancelEditState}>Cancel</Button>}
       </div>
       <State/>
       <View id="application" src={iframeUrl}></View>
     </Main>
-  }</DevToolState>
+  }}</DevToolState>
 
 render(<StateProvider>
-  <DevTool/>
+  <Router basepath="/">
+    <DevTool default/>
+    <DevTool path="/:mode/:url"/>
+  </Router>
 </StateProvider>, document.body)
 
 window.addEventListener('message', DevToolState.value.applicationMessage, false)

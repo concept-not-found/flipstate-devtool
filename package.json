@@ -1,6 +1,7 @@
 {
   "name": "flipstate-devtool",
-  "version": "2.0.0",
+  "version": "3.0.0",
+  "private": true,
   "description": "Live edit flipstate applications",
   "main": "index.js",
   "scripts": {
@@ -12,10 +13,12 @@
   "author": "Ronald Chen",
   "license": "ISC",
   "dependencies": {
+    "@reach/router": "1.1.1",
     "babel-polyfill": "6.26.0",
     "emotion": "9.2.3",
     "flipstate": "1.1.1",
     "preact": "8.2.9",
+    "preact-compat": "3.18.0",
     "preact-context": "1.0.2",
     "preact-emotion": "9.2.3",
     "ramda": "0.25.0"
