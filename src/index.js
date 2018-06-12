@@ -63,11 +63,9 @@ function renderStateEditor (editingState, state, updateApplicationStateEditorSta
   return result
 }
 
-const State = () => <DevToolState>{({editingState, applicationState, applicationStateEditorState, updateApplicationStateEditorState}) => {
+const State = () => <DevToolState>{({editingState, applicationState, updateApplicationStateEditorState}) => {
   return <StateContainer editing={editingState}>
-    {renderStateEditor(editingState, editingState
-      ? applicationStateEditorState
-      : applicationState, updateApplicationStateEditorState)}
+    {applicationState && renderStateEditor(editingState, applicationState, updateApplicationStateEditorState)}
   </StateContainer>
 }}</DevToolState>
 
@@ -77,6 +75,34 @@ function getOrigin (url) {
   return anchor.origin
 }
 
+let application
+
+function getState () {
+  if (!application) {
+    return
+  }
+  application().postMessage({
+    type: 'get state'
+  }, '*')
+}
+function subscribeState () {
+  if (!application) {
+    return
+  }
+  application().postMessage({
+    type: 'subscribe state update'
+  }, '*')
+}
+function setState (state) {
+  if (!application) {
+    return
+  }
+  application().postMessage({
+    type: 'set state',
+    state: JSON.stringify(state)
+  }, '*')
+}
+
 const DevToolState = addState('DevTool', {
   addressBarUrl: 'http://localhost:8080/',
   udpateAddressBarUrl (state, {target: {value: addressBarUrl}}) {
@@ -84,21 +110,31 @@ const DevToolState = addState('DevTool', {
       addressBarUrl
     }
   },
-  gotoAddress ({addressBarUrl}) {
+  connected: false,
+  iframeUrl: '',
+  openAsIframe ({connected, addressBarUrl}) {
+    if (connected === 'window') {
+      application().close()
+    }
+    application = () => document.getElementById('application').contentWindow
     return {
-      applicationUrl: addressBarUrl
+      connected: 'iframe',
+      iframeUrl: addressBarUrl,
+      applicationState: undefined
     }
   },
-  applicationUrl: '',
-  applicationState: {},
-  autoRefresh: false,
-  getState () {
-    const application = document.getElementById('application').contentWindow
-    application.postMessage({
-      type: 'get state'
-    }, '*')
+  openAsWindow ({connected, addressBarUrl}) {
+    const windowRef = window.open(addressBarUrl, 'flipstate-application')
+    application = () => windowRef
+    return {
+      connected: 'window',
+      iframeUrl: '',
+      applicationState: undefined
+    }
   },
-  updateAutoRefresh ({getState, subscribeState}, {target: {checked: autoRefresh}}) {
+  applicationState: undefined,
+  autoRefresh: false,
+  updateAutoRefresh (state, {target: {checked: autoRefresh}}) {
     if (autoRefresh) {
       getState()
       subscribeState()
@@ -107,16 +143,9 @@ const DevToolState = addState('DevTool', {
       autoRefresh
     }
   },
-  subscribeState () {
-    const application = document.getElementById('application').contentWindow
-    application.postMessage({
-      type: 'subscribe state update'
-    }, '*')
-  },
-  applicationMessage ({applicationUrl, autoRefresh, editingState, subscribeState}, event) {
-    console.log(event)
+  applicationMessage ({addressBarUrl, autoRefresh, editingState}, event) {
     const {origin, data = {}} = event
-    if (origin !== getOrigin(applicationUrl)) {
+    if (origin !== getOrigin(addressBarUrl)) {
       return
     }
     if (data.protocol !== 'flipstate-devtool v1') {
@@ -137,31 +166,26 @@ const DevToolState = addState('DevTool', {
     }
   },
   editingState: false,
-  startEditState ({applicationState}) {
+  startEditState (state) {
     return {
-      editingState: true,
-      applicationStateEditorState: applicationState
+      editingState: true
     }
   },
-  cancelEditState ({getState}) {
+  cancelEditState (state) {
     getState()
     return {
       editingState: false
     }
   },
-  updateApplicationStateEditorState ({applicationStateEditorState}, path, {target: {type, checked, value}}) {
+  updateApplicationStateEditorState ({applicationState}, path, {target: {type, checked, value}}) {
     return {
-      applicationStateEditorState: R.set(R.lensPath(path), type
+      applicationState: R.set(R.lensPath(path), type
         ? checked
-        : value, applicationStateEditorState)
+        : value, applicationState)
     }
   },
-  saveEditState ({getState, applicationStateEditorState}) {
-    const application = document.getElementById('application').contentWindow
-    application.postMessage({
-      type: 'set state',
-      state: JSON.stringify(applicationStateEditorState)
-    }, '*')
+  saveEditState ({applicationState}) {
+    setState(applicationState)
     getState()
     return {
       editingState: false
@@ -170,29 +194,31 @@ const DevToolState = addState('DevTool', {
 })
 
 const DevTool = () =>
-  <DevToolState>{({applicationUrl, backAddress, forwardAddress, addressBarUrl, udpateAddressBarUrl, gotoAddress, getState, autoRefresh, updateAutoRefresh, applicationState, editingState, startEditState, saveEditState, cancelEditState}) =>
+  <DevToolState>{({connected, iframeUrl, backAddress, forwardAddress, addressBarUrl, udpateAddressBarUrl, openAsWindow, openAsIframe, autoRefresh, updateAutoRefresh, applicationState, editingState, startEditState, saveEditState, cancelEditState}) =>
     <Main>
       <h1>flipstate dev tool</h1>
       <div>
-        <Button onClick={backAddress}>⇦</Button>
-        <Button onClick={forwardAddress}>⇨</Button>
-        <AddressBarInput type="text" value={addressBarUrl} onChange={udpateAddressBarUrl}/>
-        <Button onClick={gotoAddress}>Go</Button>
+        <Button onClick={backAddress} disabled={editingState}>⇦</Button>
+        <Button onClick={forwardAddress} disabled={editingState}>⇨</Button>
+        <AddressBarInput type="text" value={addressBarUrl} onChange={udpateAddressBarUrl} disabled={editingState}/>
+        <Button onClick={openAsIframe} disabled={editingState}>Open as iframe</Button>
+        <Button onClick={openAsWindow} disabled={editingState}>Open as window</Button>
+        <span>If iframe doesn't work, try window mode as it avoids https restrictions</span>
       </div>
       <h2>State</h2>
       <div>
-        <Button onClick={getState} disabled={autoRefresh || editingState}>{autoRefresh} {editingState}Refresh</Button>
+        <Button onClick={getState} disabled={!connected || autoRefresh || editingState}>{autoRefresh} {editingState}Refresh</Button>
         <label>
-          <Checkbox type="checkbox" checked={autoRefresh} onChange={updateAutoRefresh} disabled={editingState}/> <LabelText disabled={editingState}>auto</LabelText>
+          <Checkbox type="checkbox" checked={autoRefresh} onChange={updateAutoRefresh} disabled={!connected || editingState}/> <LabelText disabled={!connected || editingState}>auto</LabelText>
         </label>
       </div>
       <div>
-        {!editingState && <Button onClick={startEditState}>Edit</Button>}
+        {!editingState && <Button onClick={startEditState} disabled={!connected || !applicationState}>Edit</Button>}
         {editingState && <Button onClick={saveEditState}>Save</Button>}
         {editingState && <Button onClick={cancelEditState}>Cancel</Button>}
       </div>
       <State/>
-      <View id="application" src={applicationUrl}></View>
+      <View id="application" src={iframeUrl}></View>
     </Main>
   }</DevToolState>
 

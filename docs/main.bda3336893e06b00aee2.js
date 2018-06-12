@@ -16118,13 +16118,12 @@ var State = function State() {
     function (_ref3) {
       var editingState = _ref3.editingState,
           applicationState = _ref3.applicationState,
-          applicationStateEditorState = _ref3.applicationStateEditorState,
           updateApplicationStateEditorState = _ref3.updateApplicationStateEditorState;
 
       return (0, _preact.h)(
         StateContainer,
         { editing: editingState },
-        renderStateEditor(editingState, editingState ? applicationStateEditorState : applicationState, updateApplicationStateEditorState)
+        applicationState && renderStateEditor(editingState, applicationState, updateApplicationStateEditorState)
       );
     }
   );
@@ -16136,6 +16135,34 @@ function getOrigin(url) {
   return anchor.origin;
 }
 
+var application = void 0;
+
+function getState() {
+  if (!application) {
+    return;
+  }
+  application().postMessage({
+    type: 'get state'
+  }, '*');
+}
+function subscribeState() {
+  if (!application) {
+    return;
+  }
+  application().postMessage({
+    type: 'subscribe state update'
+  }, '*');
+}
+function setState(state) {
+  if (!application) {
+    return;
+  }
+  application().postMessage({
+    type: 'set state',
+    state: JSON.stringify(state)
+  }, '*');
+}
+
 var DevToolState = addState('DevTool', {
   addressBarUrl: 'http://localhost:8080/',
   udpateAddressBarUrl: function udpateAddressBarUrl(state, _ref4) {
@@ -16145,26 +16172,43 @@ var DevToolState = addState('DevTool', {
       addressBarUrl: addressBarUrl
     };
   },
-  gotoAddress: function gotoAddress(_ref5) {
-    var addressBarUrl = _ref5.addressBarUrl;
 
+  connected: false,
+  iframeUrl: '',
+  openAsIframe: function openAsIframe(_ref5) {
+    var connected = _ref5.connected,
+        addressBarUrl = _ref5.addressBarUrl;
+
+    if (connected === 'window') {
+      application().close();
+    }
+    application = function application() {
+      return document.getElementById('application').contentWindow;
+    };
     return {
-      applicationUrl: addressBarUrl
+      connected: 'iframe',
+      iframeUrl: addressBarUrl,
+      applicationState: undefined
+    };
+  },
+  openAsWindow: function openAsWindow(_ref6) {
+    var connected = _ref6.connected,
+        addressBarUrl = _ref6.addressBarUrl;
+
+    var windowRef = window.open(addressBarUrl, 'flipstate-application');
+    application = function application() {
+      return windowRef;
+    };
+    return {
+      connected: 'window',
+      iframeUrl: '',
+      applicationState: undefined
     };
   },
 
-  applicationUrl: '',
-  applicationState: {},
+  applicationState: undefined,
   autoRefresh: false,
-  getState: function getState() {
-    var application = document.getElementById('application').contentWindow;
-    application.postMessage({
-      type: 'get state'
-    }, '*');
-  },
-  updateAutoRefresh: function updateAutoRefresh(_ref6, _ref7) {
-    var getState = _ref6.getState,
-        subscribeState = _ref6.subscribeState;
+  updateAutoRefresh: function updateAutoRefresh(state, _ref7) {
     var autoRefresh = _ref7.target.checked;
 
     if (autoRefresh) {
@@ -16175,24 +16219,15 @@ var DevToolState = addState('DevTool', {
       autoRefresh: autoRefresh
     };
   },
-  subscribeState: function subscribeState() {
-    var application = document.getElementById('application').contentWindow;
-    application.postMessage({
-      type: 'subscribe state update'
-    }, '*');
-  },
   applicationMessage: function applicationMessage(_ref8, event) {
-    var applicationUrl = _ref8.applicationUrl,
+    var addressBarUrl = _ref8.addressBarUrl,
         autoRefresh = _ref8.autoRefresh,
-        editingState = _ref8.editingState,
-        subscribeState = _ref8.subscribeState;
-
-    console.log(event);
+        editingState = _ref8.editingState;
     var origin = event.origin,
         _event$data = event.data,
         data = _event$data === undefined ? {} : _event$data;
 
-    if (origin !== getOrigin(applicationUrl)) {
+    if (origin !== getOrigin(addressBarUrl)) {
       return;
     }
     if (data.protocol !== 'flipstate-devtool v1') {
@@ -16214,42 +16249,32 @@ var DevToolState = addState('DevTool', {
   },
 
   editingState: false,
-  startEditState: function startEditState(_ref9) {
-    var applicationState = _ref9.applicationState;
-
+  startEditState: function startEditState(state) {
     return {
-      editingState: true,
-      applicationStateEditorState: applicationState
+      editingState: true
     };
   },
-  cancelEditState: function cancelEditState(_ref10) {
-    var getState = _ref10.getState;
-
+  cancelEditState: function cancelEditState(state) {
     getState();
     return {
       editingState: false
     };
   },
-  updateApplicationStateEditorState: function updateApplicationStateEditorState(_ref11, path, _ref12) {
-    var applicationStateEditorState = _ref11.applicationStateEditorState;
-    var _ref12$target = _ref12.target,
-        type = _ref12$target.type,
-        checked = _ref12$target.checked,
-        value = _ref12$target.value;
+  updateApplicationStateEditorState: function updateApplicationStateEditorState(_ref9, path, _ref10) {
+    var applicationState = _ref9.applicationState;
+    var _ref10$target = _ref10.target,
+        type = _ref10$target.type,
+        checked = _ref10$target.checked,
+        value = _ref10$target.value;
 
     return {
-      applicationStateEditorState: (0, _set3.default)((0, _lensPath3.default)(path), type ? checked : value, applicationStateEditorState)
+      applicationState: (0, _set3.default)((0, _lensPath3.default)(path), type ? checked : value, applicationState)
     };
   },
-  saveEditState: function saveEditState(_ref13) {
-    var getState = _ref13.getState,
-        applicationStateEditorState = _ref13.applicationStateEditorState;
+  saveEditState: function saveEditState(_ref11) {
+    var applicationState = _ref11.applicationState;
 
-    var application = document.getElementById('application').contentWindow;
-    application.postMessage({
-      type: 'set state',
-      state: JSON.stringify(applicationStateEditorState)
-    }, '*');
+    setState(applicationState);
     getState();
     return {
       editingState: false
@@ -16261,21 +16286,22 @@ var DevTool = function DevTool() {
   return (0, _preact.h)(
     DevToolState,
     null,
-    function (_ref14) {
-      var applicationUrl = _ref14.applicationUrl,
-          backAddress = _ref14.backAddress,
-          forwardAddress = _ref14.forwardAddress,
-          addressBarUrl = _ref14.addressBarUrl,
-          udpateAddressBarUrl = _ref14.udpateAddressBarUrl,
-          gotoAddress = _ref14.gotoAddress,
-          getState = _ref14.getState,
-          autoRefresh = _ref14.autoRefresh,
-          updateAutoRefresh = _ref14.updateAutoRefresh,
-          applicationState = _ref14.applicationState,
-          editingState = _ref14.editingState,
-          startEditState = _ref14.startEditState,
-          saveEditState = _ref14.saveEditState,
-          cancelEditState = _ref14.cancelEditState;
+    function (_ref12) {
+      var connected = _ref12.connected,
+          iframeUrl = _ref12.iframeUrl,
+          backAddress = _ref12.backAddress,
+          forwardAddress = _ref12.forwardAddress,
+          addressBarUrl = _ref12.addressBarUrl,
+          udpateAddressBarUrl = _ref12.udpateAddressBarUrl,
+          openAsWindow = _ref12.openAsWindow,
+          openAsIframe = _ref12.openAsIframe,
+          autoRefresh = _ref12.autoRefresh,
+          updateAutoRefresh = _ref12.updateAutoRefresh,
+          applicationState = _ref12.applicationState,
+          editingState = _ref12.editingState,
+          startEditState = _ref12.startEditState,
+          saveEditState = _ref12.saveEditState,
+          cancelEditState = _ref12.cancelEditState;
       return (0, _preact.h)(
         Main,
         null,
@@ -16289,19 +16315,29 @@ var DevTool = function DevTool() {
           null,
           (0, _preact.h)(
             Button,
-            { onClick: backAddress },
+            { onClick: backAddress, disabled: editingState },
             '\u21E6'
           ),
           (0, _preact.h)(
             Button,
-            { onClick: forwardAddress },
+            { onClick: forwardAddress, disabled: editingState },
             '\u21E8'
           ),
-          (0, _preact.h)(AddressBarInput, { type: 'text', value: addressBarUrl, onChange: udpateAddressBarUrl }),
+          (0, _preact.h)(AddressBarInput, { type: 'text', value: addressBarUrl, onChange: udpateAddressBarUrl, disabled: editingState }),
           (0, _preact.h)(
             Button,
-            { onClick: gotoAddress },
-            'Go'
+            { onClick: openAsIframe, disabled: editingState },
+            'Open as iframe'
+          ),
+          (0, _preact.h)(
+            Button,
+            { onClick: openAsWindow, disabled: editingState },
+            'Open as window'
+          ),
+          (0, _preact.h)(
+            'span',
+            null,
+            'If iframe doesn\'t work, try window mode as it avoids https restrictions'
           )
         ),
         (0, _preact.h)(
@@ -16314,7 +16350,7 @@ var DevTool = function DevTool() {
           null,
           (0, _preact.h)(
             Button,
-            { onClick: getState, disabled: autoRefresh || editingState },
+            { onClick: getState, disabled: !connected || autoRefresh || editingState },
             autoRefresh,
             ' ',
             editingState,
@@ -16323,11 +16359,11 @@ var DevTool = function DevTool() {
           (0, _preact.h)(
             'label',
             null,
-            (0, _preact.h)(Checkbox, { type: 'checkbox', checked: autoRefresh, onChange: updateAutoRefresh, disabled: editingState }),
+            (0, _preact.h)(Checkbox, { type: 'checkbox', checked: autoRefresh, onChange: updateAutoRefresh, disabled: !connected || editingState }),
             ' ',
             (0, _preact.h)(
               LabelText,
-              { disabled: editingState },
+              { disabled: !connected || editingState },
               'auto'
             )
           )
@@ -16337,7 +16373,7 @@ var DevTool = function DevTool() {
           null,
           !editingState && (0, _preact.h)(
             Button,
-            { onClick: startEditState },
+            { onClick: startEditState, disabled: !connected || !applicationState },
             'Edit'
           ),
           editingState && (0, _preact.h)(
@@ -16352,7 +16388,7 @@ var DevTool = function DevTool() {
           )
         ),
         (0, _preact.h)(State, null),
-        (0, _preact.h)(View, { id: 'application', src: applicationUrl })
+        (0, _preact.h)(View, { id: 'application', src: iframeUrl })
       );
     }
   );
@@ -16382,4 +16418,4 @@ module.exports = __webpack_require__(/*! ./src/index.js */"./src/index.js");
 /***/ })
 
 /******/ });
-//# sourceMappingURL=main.d2a5ad57154467cf76d4.js.map
+//# sourceMappingURL=main.bda3336893e06b00aee2.js.map
