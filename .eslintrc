@@ -1,0 +1,31 @@
+{
+  "extends": [
+    "standard"
+  ],
+  "env": {
+    "browser": true,
+    "node": true
+  },
+  "parserOptions": {
+    "sourceType": "module",
+    "ecmaFeatures": {
+      "jsx": true,
+      "templateStrings": true,
+      "classes": true
+    }
+  },
+  "plugins": [
+    "react"
+  ],
+  "rules": {
+    "react/jsx-uses-react": "error",
+    "react/jsx-uses-vars": "error"
+  },
+  "settings": {
+    "react": {
+      "pragma": "h"
+    }
+  },
+  "globals": {
+  }
+}

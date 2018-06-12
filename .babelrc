@@ -1,0 +1,16 @@
+{
+  "presets": [
+    "env"
+  ],
+  "plugins": [
+    ["emotion", { 
+      "hoist": true
+    }],
+    ["transform-react-jsx", {
+      "pragma": "h"
+    }],
+    "syntax-dynamic-import",
+    "transform-object-rest-spread",
+    "ramda"
+  ]
+}
