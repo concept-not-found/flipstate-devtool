@@ -77,7 +77,7 @@
 /******/ 	__webpack_require__.o = function(object, property) { return Object.prototype.hasOwnProperty.call(object, property); };
 /******/
 /******/ 	// __webpack_public_path__
-/******/ 	__webpack_require__.p = "/";
+/******/ 	__webpack_require__.p = "https://concept-not-found.github.io/flipstate-devtool/";
 /******/
 /******/
 /******/ 	// Load entry module and return exports
@@ -16382,4 +16382,4 @@ module.exports = __webpack_require__(/*! ./src/index.js */"./src/index.js");
 /***/ })
 
 /******/ });
-//# sourceMappingURL=main.a5dec595505afee6ff4d.js.map
+//# sourceMappingURL=main.d2a5ad57154467cf76d4.js.map
