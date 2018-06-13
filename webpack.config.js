@@ -1,5 +1,6 @@
 const Path = require('path')
 const Webpack = require('webpack')
+const Url = require('url')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
@@ -13,7 +14,7 @@ module.exports = {
   output: {
     path: Path.join(__dirname, 'docs'),
     filename: '[name].[chunkhash].js',
-    publicPath: process.env.PUBLIC_PATH || '/'
+    publicPath: `${process.env.PUBLIC_PATH || ''}/`
   },
 
   resolve: {
@@ -42,7 +43,9 @@ module.exports = {
       template: './src/index.html'
     }),
     new Webpack.DefinePlugin({
-      PUBLIC_PATH: JSON.stringify(process.env.PUBLIC_PATH || '/')
+      BASE_PATH: JSON.stringify(process.env.PUBLIC_PATH
+        ? Url.parse(process.env.PUBLIC_PATH).path
+        : '')
     })
   ],
 

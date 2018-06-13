@@ -27,6 +27,6 @@
     }
   },
   "globals": {
-    "PUBLIC_PATH": true
+    "BASE_PATH": true
   }
 }

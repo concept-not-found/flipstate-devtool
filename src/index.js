@@ -4,6 +4,8 @@ import createState from 'flipstate/preact'
 import R from 'ramda'
 import {Router as UnstyledRouter, navigate} from '@reach/router'
 
+const basePath = BASE_PATH
+
 const {StateProvider, addState} = createState()
 const Main = styled('div')`
   padding: 16px;
@@ -79,12 +81,6 @@ function getOrigin (url) {
   return anchor.origin
 }
 
-function getPath (url) {
-  const anchor = document.createElement('a')
-  anchor.href = url
-  return anchor.pathname
-}
-
 let application
 
 function getState () {
@@ -157,7 +153,7 @@ const DevToolState = addState('DevTool', {
       application().close()
     }
     application = () => document.getElementById('application').contentWindow
-    navigate(`/iframe/${encodeURIComponent(addressBarUrl)}`, {
+    navigate(`${basePath}/iframe/${encodeURIComponent(addressBarUrl)}`, {
       replace: true
     })
     syncState()
@@ -171,7 +167,7 @@ const DevToolState = addState('DevTool', {
   openAsWindow ({syncState, connected, addressBarUrl}) {
     const windowRef = window.open(addressBarUrl, 'flipstate-application')
     application = () => windowRef
-    navigate(`/window/${encodeURIComponent(addressBarUrl)}`, {
+    navigate(`${basePath}/window/${encodeURIComponent(addressBarUrl)}`, {
       replace: true
     })
     syncState()
@@ -261,9 +257,9 @@ const DevTool = ({mode, url}) =>
   }}</DevToolState>
 
 render(<StateProvider>
-  <Router basepath={getPath(PUBLIC_PATH)}>
-    <DevTool default/>
-    <DevTool path="/:mode/:url"/>
+  <Router basepath={basePath}>
+    <DevTool path="/"/>
+    <DevTool path=":mode/:url"/>
   </Router>
 </StateProvider>, document.body)
 
