@@ -1,4 +1,5 @@
 const Path = require('path')
+const Webpack = require('webpack')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 
 module.exports = {
@@ -39,6 +40,9 @@ module.exports = {
   plugins: [
     new HtmlWebpackPlugin({
       template: './src/index.html'
+    }),
+    new Webpack.DefinePlugin({
+      PUBLIC_PATH: JSON.stringify(process.env.PUBLIC_PATH || '/')
     })
   ],
 

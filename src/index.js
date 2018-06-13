@@ -255,7 +255,7 @@ const DevTool = ({mode, url}) =>
   }}</DevToolState>
 
 render(<StateProvider>
-  <Router basepath="/">
+  <Router basepath={PUBLIC_PATH}>
     <DevTool default/>
     <DevTool path="/:mode/:url"/>
   </Router>

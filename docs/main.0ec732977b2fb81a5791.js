@@ -18941,7 +18941,7 @@ var DevTool = function DevTool(_ref13) {
   null,
   (0, _preact.h)(
     Router,
-    { basepath: '/' },
+    { basepath: "https://concept-not-found.github.io/flipstate-devtool/" },
     (0, _preact.h)(DevTool, { 'default': true }),
     (0, _preact.h)(DevTool, { path: '/:mode/:url' })
   )
@@ -18965,4 +18965,4 @@ module.exports = __webpack_require__(/*! ./src/index.js */"./src/index.js");
 /***/ })
 
 /******/ });
-//# sourceMappingURL=main.e4c98993062ed35e996d.js.map
+//# sourceMappingURL=main.0ec732977b2fb81a5791.js.map
