@@ -7,6 +7,7 @@
   "scripts": {
     "prebuild": "rimraf docs/",
     "build": "PUBLIC_PATH='https://concept-not-found.github.io/flipstate-devtool' webpack",
+    "postbuild": "cp cdn-root/* docs",
     "start": "webpack-dev-server --compress --progress --colors --host localhost --port 9080 --content-base cdn-root",
     "lint": "eslint --fix ."
   },
