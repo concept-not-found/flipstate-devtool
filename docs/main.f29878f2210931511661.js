@@ -1054,10 +1054,12 @@ var BaseContext = createNamedContext("Base", { baseuri: "/", basepath: "/" });
 ////////////////////////////////////////////////////////////////////////////////
 // The main event, welcome to the show everybody.
 var Router = function Router(props) {
+  console.log(props)
   return react__WEBPACK_IMPORTED_MODULE_0__["default"].createElement(
     BaseContext.Consumer,
     null,
     function (baseContext) {
+      console.log(baseContext)
       return react__WEBPACK_IMPORTED_MODULE_0__["default"].createElement(
         Location,
         null,
@@ -1125,6 +1127,7 @@ var RouterImpl = function (_React$PureComponent) {
       // don't pass any props to 'div'
       var wrapperProps = primary ? _extends({ uri: uri, location: location, component: component }, domProps) : domProps;
 
+      console.log('in', {basepath})
       return react__WEBPACK_IMPORTED_MODULE_0__["default"].createElement(
         BaseContext.Provider,
         { value: { baseuri: uri, basepath: basepath } },
@@ -18531,6 +18534,8 @@ function _asyncToGenerator(fn) { return function () { var gen = fn.apply(this, a
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
+var basePath = "/flipstate-devtool";
+
 var _createState = (0, _preact3.default)(),
     StateProvider = _createState.StateProvider,
     addState = _createState.addState;
@@ -18638,12 +18643,6 @@ function getOrigin(url) {
   var anchor = document.createElement('a');
   anchor.href = url;
   return anchor.origin;
-}
-
-function getPath(url) {
-  var anchor = document.createElement('a');
-  anchor.href = url;
-  return anchor.pathname;
 }
 
 var application = void 0;
@@ -18756,7 +18755,7 @@ var DevToolState = addState('DevTool', {
     application = function application() {
       return document.getElementById('application').contentWindow;
     };
-    (0, _router.navigate)('/iframe/' + encodeURIComponent(addressBarUrl), {
+    (0, _router.navigate)(basePath + '/iframe/' + encodeURIComponent(addressBarUrl), {
       replace: true
     });
     syncState();
@@ -18776,7 +18775,7 @@ var DevToolState = addState('DevTool', {
     application = function application() {
       return windowRef;
     };
-    (0, _router.navigate)('/window/' + encodeURIComponent(addressBarUrl), {
+    (0, _router.navigate)(basePath + '/window/' + encodeURIComponent(addressBarUrl), {
       replace: true
     });
     syncState();
@@ -18947,9 +18946,9 @@ var DevTool = function DevTool(_ref13) {
   null,
   (0, _preact.h)(
     Router,
-    { basepath: getPath("https://concept-not-found.github.io/flipstate-devtool/") },
-    (0, _preact.h)(DevTool, { 'default': true }),
-    (0, _preact.h)(DevTool, { path: '/:mode/:url' })
+    { basepath: basePath },
+    (0, _preact.h)(DevTool, { path: '/' }),
+    (0, _preact.h)(DevTool, { path: ':mode/:url' })
   )
 ), document.body);
 
@@ -18971,4 +18970,4 @@ module.exports = __webpack_require__(/*! ./src/index.js */"./src/index.js");
 /***/ })
 
 /******/ });
-//# sourceMappingURL=main.c056e5d40010449d1061.js.map
+//# sourceMappingURL=main.f29878f2210931511661.js.map
