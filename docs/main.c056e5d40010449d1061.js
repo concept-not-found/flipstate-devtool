@@ -18640,6 +18640,12 @@ function getOrigin(url) {
   return anchor.origin;
 }
 
+function getPath(url) {
+  var anchor = document.createElement('a');
+  anchor.href = url;
+  return anchor.pathname;
+}
+
 var application = void 0;
 
 function getState() {
@@ -18941,7 +18947,7 @@ var DevTool = function DevTool(_ref13) {
   null,
   (0, _preact.h)(
     Router,
-    { basepath: "https://concept-not-found.github.io/flipstate-devtool/" },
+    { basepath: getPath("https://concept-not-found.github.io/flipstate-devtool/") },
     (0, _preact.h)(DevTool, { 'default': true }),
     (0, _preact.h)(DevTool, { path: '/:mode/:url' })
   )
@@ -18965,4 +18971,4 @@ module.exports = __webpack_require__(/*! ./src/index.js */"./src/index.js");
 /***/ })
 
 /******/ });
-//# sourceMappingURL=main.0ec732977b2fb81a5791.js.map
+//# sourceMappingURL=main.c056e5d40010449d1061.js.map

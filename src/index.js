@@ -79,6 +79,12 @@ function getOrigin (url) {
   return anchor.origin
 }
 
+function getPath (url) {
+  const anchor = document.createElement('a')
+  anchor.href = url
+  return anchor.pathname
+}
+
 let application
 
 function getState () {
@@ -255,7 +261,7 @@ const DevTool = ({mode, url}) =>
   }}</DevToolState>
 
 render(<StateProvider>
-  <Router basepath={PUBLIC_PATH}>
+  <Router basepath={getPath(PUBLIC_PATH)}>
     <DevTool default/>
     <DevTool path="/:mode/:url"/>
   </Router>
