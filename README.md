@@ -3,7 +3,7 @@ flipstate devtool
 
 View and edit the state of a [flipstate](https://github.com/concept-not-found/flipstate) application.
 
-###[Try demo](https://concept-not-found.github.io/flipstate-devtool/iframe/https%3A%2F%2Fconcept-not-found.github.io%2Fflipstate-samples%2Fcomposed-state%2F)
+### [Try demo](https://concept-not-found.github.io/flipstate-devtool/iframe/https%3A%2F%2Fconcept-not-found.github.io%2Fflipstate-samples%2Fcomposed-state%2F)
 
 Setup
 -----
